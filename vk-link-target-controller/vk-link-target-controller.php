@@ -3,7 +3,7 @@
 Plugin Name: VK Link Target Controller
 Plugin URI: https://github.com/vektor-inc/vk-link-target-controller
 Description: Allow you to link a post title from the recent posts list to another page (internal or external link) rather than link to the actual post page
-Version: 1.7.7.0
+Version: 1.7.8.0
 Author: Vektor,Inc.
 Author URI: http://www.vektor-inc.co.jp/
 License: GPL2
@@ -254,7 +254,7 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 									$post_types         = $this->get_public_post_types(); // array of post types to create a checkbox list
 									$post_types['page'] = __( 'Pages' );
 									foreach ( $post_types as $slug => $label ) {
-										$options_exist = $this->get_option();
+										$options_exist = $this->get_option() ? $this->get_option() : array();
 										$checked       = ( 0 != $options_exist && in_array( $slug, $options_exist ) ) ? 'checked="checked"' : '';
 										?>
 										<input type="checkbox" name="custom-post-types[]" id="custom-post-types-<?php echo $slug; ?>" value="<?php echo $slug; ?>" <?php echo $checked; ?> />
