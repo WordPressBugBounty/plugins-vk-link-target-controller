@@ -4,7 +4,7 @@ Donate link:
 Tags: redirection,link,recent posts,list,page,post
 Requires at least: 5.3
 Tested up to: 6.8
-Stable tag: 1.7.8.0
+Stable tag: 1.7.9.0
 License: GPL2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -86,14 +86,24 @@ In order to have the link opened in a new window VK Link Target Controller needs
 
 Your theme probably has it if it follows the WordPress Theme recommendations.
 
-Example:
+Example A:
 `
-<div class="post-item post-block front-page-list" id="post-<?php the_ID(); ?>">
+<div class="post-item post-block front-page-list post-<?php the_ID(); ?>" id="post-<?php the_ID(); ?>">
 	<a href="<?php the permalink(); ?>">
  		<?php the_title(); ?>
 	</a>
 </div>
 `
+
+Example B:
+`
+<div class="<?php echo esc_attr( implode( ' ', get_post_class() ) ); ?>" id="post-<?php the_ID(); ?>">
+    <a href="<?php the_permalink(); ?>">
+        <?php the_title(); ?>
+    </a>
+</div>
+`
+get_post_class() returns a value that includes the post ID.
 
 = Any chance to get the plugin translated in my language? =
 
@@ -108,6 +118,9 @@ But we have a .pot file available so feel free to translate it in your language 
 4. A relative url that refer to a page of your website: **note slash "/" at the beginning**.
 
 == Changelog ==
+
+= 1.7.9 =
+ [ Other ] Update Readme
 
 = 1.7.8 =
  [ Bug fix ] Fix fatal error on setting screen.
