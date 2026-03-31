@@ -4,7 +4,7 @@ Donate link:
 Tags: redirection,link,recent posts,list,page,post
 Requires at least: 5.3
 Tested up to: 6.9
-Stable tag: 1.8.0.1
+Stable tag: 1.8.1
 License: GPL2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -118,6 +118,9 @@ But we have a .pot file available so feel free to translate it in your language 
 4. A relative url that refer to a page of your website: **note slash "/" at the beginning**.
 
 == Changelog ==
+
+= 1.8.1 =
+* [ Other ] Add back compatibility flag to meta box for WordPress 7.0 RTC support.
 
 = 1.8.0 =
 * [ Add Function ] Add internal link search with WordPress standard link dialog.

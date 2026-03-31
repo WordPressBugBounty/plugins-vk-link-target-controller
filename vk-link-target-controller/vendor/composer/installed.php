@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'vektor-inc/vk-link-target-controller',
-        'pretty_version' => '1.8.0.1',
-        'version' => '1.8.0.1',
-        'reference' => '0f1a564cd10745bf2a95aaba9002a91796a108f9',
+        'pretty_version' => '1.8.1',
+        'version' => '1.8.1.0',
+        'reference' => 'd9ed6fc827e443a513d524270c2432e5eb7f5560',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,18 +11,18 @@
     ),
     'versions' => array(
         'vektor-inc/vk-admin' => array(
-            'pretty_version' => '0.3.3',
-            'version' => '0.3.3.0',
-            'reference' => 'f500af90056a79318df9bf82568770fe4f12d545',
+            'pretty_version' => '0.5.0',
+            'version' => '0.5.0.0',
+            'reference' => '3908c409bb72e18b27be2ce861fbf3fbc1579e0c',
             'type' => 'library',
             'install_path' => __DIR__ . '/../vektor-inc/vk-admin',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
         'vektor-inc/vk-link-target-controller' => array(
-            'pretty_version' => '1.8.0.1',
-            'version' => '1.8.0.1',
-            'reference' => '0f1a564cd10745bf2a95aaba9002a91796a108f9',
+            'pretty_version' => '1.8.1',
+            'version' => '1.8.1.0',
+            'reference' => 'd9ed6fc827e443a513d524270c2432e5eb7f5560',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
