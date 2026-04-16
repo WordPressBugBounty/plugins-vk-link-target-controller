@@ -3,7 +3,7 @@
 Plugin Name: VK Link Target Controller
 Plugin URI: https://github.com/vektor-inc/vk-link-target-controller
 Description: Allow you to link a post title from the recent posts list to another page (internal or external link) rather than link to the actual post page
-Version: 1.9.0
+Version: 1.10.0
 Author: Vektor,Inc.
 Author URI: http://www.vektor-inc.co.jp/
 License: GPL2
@@ -112,7 +112,15 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 			wp_enqueue_script( 'vk-ltc-js' );
 
 			// Ajax.
-			wp_localize_script( 'vk-ltc-js', 'vkLtc', array( 'ajaxurl' => admin_url( 'admin-ajax.php' ) ) );
+			// editLabel: 編集リンクのラベルテキスト（翻訳対応）。
+			wp_localize_script(
+				'vk-ltc-js',
+				'vkLtc',
+				array(
+					'ajaxurl'   => admin_url( 'admin-ajax.php' ),
+					'editLabel' => __( 'Edit', 'vk-link-target-controller' ),
+				)
+			);
 			add_action( 'wp_ajax_ids', array( $this, 'ajax_rewrite_ids' ) );
 			add_action( 'wp_ajax_nopriv_ids', array( $this, 'ajax_rewrite_ids' ) );
 		}
@@ -279,7 +287,7 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 
 				register_setting(
 					'vk-ltc-options',
-					'custom-post-types',
+					'vk_ltc_custom_post_types',
 					array( $this, 'sanitize_settings' )
 				); // create settings options in DB (use WordPress Settings API).
 			}
@@ -314,8 +322,8 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 										$options_exist = $this->get_option() ? $this->get_option() : array();
 										$checked       = ( 0 != $options_exist && in_array( $slug, $options_exist ) ) ? 'checked="checked"' : '';
 										?>
-										<input type="checkbox" name="custom-post-types[]" id="custom-post-types-<?php echo $slug; ?>" value="<?php echo $slug; ?>" <?php echo $checked; ?> />
-										<label for="custom-post-types-<?php echo $slug; ?>"><?php echo $label; ?></label><br />
+										<input type="checkbox" name="vk_ltc_custom_post_types[]" id="vk_ltc_custom_post_types-<?php echo $slug; ?>" value="<?php echo $slug; ?>" <?php echo $checked; ?> />
+										<label for="vk_ltc_custom_post_types-<?php echo $slug; ?>"><?php echo $label; ?></label><br />
 																					<?php
 									}
 									?>
@@ -646,13 +654,38 @@ jQuery(document).ready(function($){
 		}
 
 		/**
-		 * default option
+		 * Get the saved option for enabled post types.
+		 * 有効な投稿タイプのオプション値を取得する。
+		 *
+		 * @access public
+		 * @return array Array of enabled post type slugs.
 		 */
 		function get_option() {
 			$post_types         = $this->get_public_post_types(); // array of post types to create a checkbox list
 			$post_types['page'] = __( 'Pages' );
 			$post_types_slugs   = array_keys( $post_types );
-			return get_option( 'custom-post-types', $post_types_slugs );
+
+			// Use a sentinel value to distinguish "option not found" from a falsy stored value.
+			// センチネル値を使って「オプションが存在しない」と「falsy な保存値」を区別する。
+			$sentinel = 'vk_ltc_option_not_found';
+
+			// First, try the new option key.
+			// まず新しいオプションキーを試す。
+			$options = get_option( 'vk_ltc_custom_post_types', $sentinel );
+			if ( $sentinel !== $options ) {
+				return $options;
+			}
+
+			// Fall back to the legacy option key for environments where admin_init migration has not yet run.
+			// admin_init の移行処理がまだ実行されていない環境のために、旧オプションキーにフォールバックする。
+			$legacy_options = get_option( 'custom-post-types', $sentinel );
+			if ( $sentinel !== $legacy_options ) {
+				return $legacy_options;
+			}
+
+			// If neither key exists, return all public post type slugs as the default.
+			// どちらのキーも存在しない場合は、全公開投稿タイプのスラッグをデフォルトとして返す。
+			return $post_types_slugs;
 		}
 
 		/**
@@ -801,10 +834,14 @@ jQuery(document).ready(function($){
 					// リダイレクト先のURLが空でない場合のみ情報を追加
 					if ( ! empty( $link ) ) {
 						$redirect_url = $this->rewrite_link( $post->ID );
+						// ログイン済みかつ編集権限がある場合のみ編集URLを含める。
+						// get_edit_post_link() はコンテキスト '' で raw URL を返す（JSON用）。
+						// 権限がないユーザーには空文字列が返る。
 						$ids[ $post->ID ] = array(
 							're' => $redirect_url,
 							'pl' => get_permalink( $post->ID ),
 							'tg' => (int) $target,
+							'el' => (string) get_edit_post_link( $post->ID, '' ),
 						);
 					}
 				}
@@ -836,3 +873,46 @@ if ( isset( $vk_link_target_controller ) ) {
 	add_action( 'admin_menu', array( $vk_link_target_controller, 'create_settings_page' ) );
 	add_action( 'plugins_loaded', array( $vk_link_target_controller, 'translation' ) );
 }
+
+/**
+ * Migrate the option key from 'custom-post-types' to 'vk_ltc_custom_post_types'.
+ * オプションキーを 'custom-post-types' から 'vk_ltc_custom_post_types' に移行する。
+ *
+ * Runs on admin_init to handle existing installations.
+ * 既存インストールに対応するため admin_init で実行する。
+ * Only migrates if the old key exists in the database; once migrated, the old key
+ * is deleted so this check has no ongoing performance cost.
+ * 旧キーがデータベースに存在する場合のみ移行する。移行後は旧キーを削除するため、
+ * 以降のパフォーマンスコストはない。
+ *
+ * @return void
+ */
+function vk_ltc_migrate_option_key() {
+	$old_key   = 'custom-post-types';
+	$new_key   = 'vk_ltc_custom_post_types';
+	$sentinel  = 'vk_ltc_option_not_found';
+
+	// Check if the old option key exists in the database.
+	// Use a unique sentinel value to distinguish "key not found" from a stored value.
+	// 旧オプションキーがデータベースに存在するか確認する。
+	// ユニークなセンチネル値を使い、「キーが見つからない」と「保存された値」を区別する。
+	$old_value = get_option( $old_key, $sentinel );
+
+	// If the old key does not exist, no migration is needed.
+	// 旧キーが存在しない場合、移行は不要。
+	if ( $sentinel === $old_value ) {
+		return;
+	}
+
+	// Only migrate if the new key does not already have a value.
+	// 新キーにまだ値が設定されていない場合のみ移行する。
+	$new_value = get_option( $new_key, $sentinel );
+	if ( $sentinel === $new_value ) {
+		update_option( $new_key, $old_value );
+	}
+
+	// Delete the old option key after migration.
+	// 移行後に旧オプションキーを削除する。
+	delete_option( $old_key );
+}
+add_action( 'admin_init', 'vk_ltc_migrate_option_key' );
