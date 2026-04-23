@@ -4,7 +4,7 @@ Donate link:
 Tags: redirection,link,recent posts,list,page,post
 Requires at least: 5.3
 Tested up to: 6.9
-Stable tag: 1.10.0
+Stable tag: 1.10.1
 License: GPL2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -118,6 +118,9 @@ But we have a .pot file available so feel free to translate it in your language 
 4. A relative url that refer to a page of your website: **note slash "/" at the beginning**.
 
 == Changelog ==
+
+= 1.10.1 =
+* [ Bug Fix ] Fixed an issue where the redirect URL could not be saved, displayed, or updated on custom post types. The fix covers CPTs registered later by other plugins (e.g. CPT UI, ExUnit), CPTs with a customized `capability_type` (e.g. a CPT using `edit_sites` instead of `edit_posts`), and CPTs that do not declare `custom-fields` post_type support.
 
 = 1.10.0 =
 * [ Spec Change ] Rename option key from 'custom-post-types' to 'vk_ltc_custom_post_types' to avoid conflicts with other plugins. Existing data is automatically migrated. Added fallback to legacy key for frontend requests before admin_init migration runs.
