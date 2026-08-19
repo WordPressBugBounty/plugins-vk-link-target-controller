@@ -3,7 +3,7 @@
 Plugin Name: VK Link Target Controller
 Plugin URI: https://github.com/vektor-inc/vk-link-target-controller
 Description: Allow you to link a post title from the recent posts list to another page (internal or external link) rather than link to the actual post page
-Version: 1.10.1
+Version: 1.10.3
 Author: Vektor,Inc.
 Author URI: http://www.vektor-inc.co.jp/
 License: GPL2
@@ -507,7 +507,7 @@ jQuery(document).ready(function($){
 			} else {
 				// check form.
 				if ( isset( $_POST['vk-ltc-link-field'] )
-					&& wp_verify_nonce( $_POST['vk-ltc-link-nonce'], 'vk-ltc-link' ) ) {
+					&& wp_verify_nonce( $_POST['vk-ltc-link-nonce'] ?? '', 'vk-ltc-link' ) ) {
 
 					// link field.
 					if ( isset( $_POST['vk-ltc-link-field'] ) ) {
@@ -820,6 +820,7 @@ jQuery(document).ready(function($){
 				'posts_per_page' => -1,
 				'paged'          => 0,
 				'post_type'      => $post_types_slugs,
+				'post_status'    => 'publish',
 				'meta_key'       => 'vk-ltc-link',
 			);
 			$query = new WP_Query( $args );
