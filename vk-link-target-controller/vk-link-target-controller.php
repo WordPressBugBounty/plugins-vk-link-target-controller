@@ -3,7 +3,7 @@
 Plugin Name: VK Link Target Controller
 Plugin URI: https://github.com/vektor-inc/vk-link-target-controller
 Description: Allow you to link a post title from the recent posts list to another page (internal or external link) rather than link to the actual post page
-Version: 1.10.4
+Version: 1.10.5
 Author: Vektor,Inc.
 Author URI: http://www.vektor-inc.co.jp/
 License: GPL2
@@ -222,8 +222,10 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 			if ( isset( $post ) && ( is_single() || is_page() ) ) {
 				$redirect = $this->has_redirection( $post->ID );
 				// redirect to the associated link.
+				// Specify ENT_QUOTES and UTF-8 explicitly because on PHP 8.0 or earlier the default flags ( ENT_COMPAT ) leave single quotes ( &#039; ) undecoded.
+				// PHP 8.0 以前はデフォルトフラグ（ ENT_COMPAT ）ではシングルクォート（ &#039; ）が復元されないため、ENT_QUOTES と UTF-8 を明示する。
 				if ( false != $redirect && $this->candidate_post_type() ) {
-					wp_redirect( html_entity_decode( esc_url( $redirect ) ) );
+					wp_redirect( html_entity_decode( esc_url( $redirect ), ENT_QUOTES, 'UTF-8' ) );
 					exit;
 				}
 			}
@@ -834,7 +836,11 @@ jQuery(document).ready(function($){
 
 					// リダイレクト先のURLが空でない場合のみ情報を追加
 					if ( ! empty( $link ) ) {
-						$redirect_url = $this->rewrite_link( $post->ID );
+						// rewrite_link() は表示用に esc_url() でエンティティ化されているため、
+						// JSON経由でJavaScriptへ渡しhrefへ直接設定する際は html_entity_decode() で復元する。
+						// Specify ENT_QUOTES and UTF-8 explicitly because on PHP 8.0 or earlier the default flags ( ENT_COMPAT ) leave single quotes ( &#039; ) undecoded.
+						// PHP 8.0 以前はデフォルトフラグ（ ENT_COMPAT ）ではシングルクォート（ &#039; ）が復元されないため、ENT_QUOTES と UTF-8 を明示する。
+						$redirect_url = html_entity_decode( $this->rewrite_link( $post->ID ), ENT_QUOTES, 'UTF-8' );
 						// ログイン済みかつ編集権限がある場合のみ編集URLを含める。
 						// get_edit_post_link() はコンテキスト '' で raw URL を返す（JSON用）。
 						// 権限がないユーザーには空文字列が返る。
@@ -854,7 +860,9 @@ jQuery(document).ready(function($){
 			// Send data to the front.
 			header( 'Content-Type: application/json' );
 			echo $json_ids;
-			exit;
+			// wp_die() (not a raw exit) so that WP_Ajax_UnitTestCase can intercept
+			// termination and make this handler unit-testable.
+			wp_die();
 		}
 	}
 
