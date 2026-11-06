@@ -3,7 +3,7 @@
 Plugin Name: VK Link Target Controller
 Plugin URI: https://github.com/vektor-inc/vk-link-target-controller
 Description: Allow you to link a post title from the recent posts list to another page (internal or external link) rather than link to the actual post page
-Version: 1.10.5
+Version: 1.10.6
 Author: Vektor,Inc.
 Author URI: http://www.vektor-inc.co.jp/
 License: GPL2
@@ -99,6 +99,9 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 		/**
 		 * Initialize_front_script function
 		 * Load plugin script on front-end
+		 * This is hooked to wp_enqueue_scripts, which WordPress does not fire on admin screens. The script rewrites links inside any element that has a post-{ID} class, and WordPress core gives that class to each row of the admin posts list, so it must not be loaded there.
+		 * フロントエンド用のスクリプトを読み込む。
+		 * 管理画面では実行されない wp_enqueue_scripts に登録している。このスクリプトは post-{ID} クラスを持つ要素内のリンクを書き換え、WordPress 本体は管理画面の投稿一覧の各行にそのクラスを付けるため、管理画面で読み込んではならない。
 		 *
 		 * @access public
 		 * @return void
@@ -121,6 +124,18 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 					'editLabel' => __( 'Edit', 'vk-link-target-controller' ),
 				)
 			);
+		}
+
+		/**
+		 * Register the Ajax handlers that return the posts with a redirect URL.
+		 * These are hooked to init instead of wp_enqueue_scripts, because requests to admin-ajax.php never fire wp_enqueue_scripts, while the front script calls these handlers from public pages (logged-in and logged-out visitors).
+		 * リダイレクト URL を設定した投稿の一覧を返す Ajax 受け口を登録する。
+		 * admin-ajax.php へのリクエストでは wp_enqueue_scripts が実行されず、一方で公開ページのフロント用スクリプトがこの受け口を呼ぶ（ログイン中・未ログインの両方）ため、wp_enqueue_scripts ではなく init に登録している。
+		 *
+		 * @access public
+		 * @return void
+		 */
+		public function register_ajax_ids_actions() {
 			add_action( 'wp_ajax_ids', array( $this, 'ajax_rewrite_ids' ) );
 			add_action( 'wp_ajax_nopriv_ids', array( $this, 'ajax_rewrite_ids' ) );
 		}
@@ -211,6 +226,9 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 		/**
 		 * redirection function
 		 * Redirect to the associated link when an user tries to access directly a post that has a link to redirect to
+		 * A relative path starting with a single slash is resolved from the path of the home URL, like rewrite_link().
+		 * 投稿へ直接アクセスされたとき、設定されたリンクへリダイレクトする。
+		 * 単一のスラッシュで始まる相対パスは、rewrite_link() と同じくホーム URL のパス部分を基準に解決する。
 		 *
 		 * @access public
 		 * @return void
@@ -225,7 +243,13 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 				// Specify ENT_QUOTES and UTF-8 explicitly because on PHP 8.0 or earlier the default flags ( ENT_COMPAT ) leave single quotes ( &#039; ) undecoded.
 				// PHP 8.0 以前はデフォルトフラグ（ ENT_COMPAT ）ではシングルクォート（ &#039; ）が復元されないため、ENT_QUOTES と UTF-8 を明示する。
 				if ( false != $redirect && $this->candidate_post_type() ) {
-					wp_redirect( html_entity_decode( esc_url( $redirect ), ENT_QUOTES, 'UTF-8' ) );
+					$destination = esc_url( $redirect );
+					// A relative path starting with a single slash needs the path of the home URL ( e.g. /blog ) like rewrite_link() does, or a site installed in a subdirectory is sent to the domain root. It stays relative so that nothing changes for a site installed in the domain root, and a protocol-relative URL ( //host/path ) is left as it is.
+					// 単一のスラッシュで始まる相対パスには rewrite_link() と同じくホーム URL のパス部分（例: /blog ）が必要で、無いとサブディレクトリ設置のサイトでドメイン直下へ飛ぶ。ドメイン直下に設置したサイトで何も変わらないよう相対のまま渡し、プロトコル相対 URL（ //host/path ）はそのままにする.
+					if ( 0 === strpos( $destination, '/' ) && 0 !== strpos( $destination, '//' ) ) {
+						$destination = untrailingslashit( (string) wp_parse_url( home_url(), PHP_URL_PATH ) ) . $destination;
+					}
+					wp_redirect( html_entity_decode( $destination, ENT_QUOTES, 'UTF-8' ) );
 					exit;
 				}
 			}
@@ -429,6 +453,7 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 
 			$checked = $target > 0 ? 'checked="checked"' : '';
 
+			// Display the stored URL as is; urldecode() would change the destination on open-and-update. / 保存値をそのまま表示する。urldecode() すると開いて更新しただけで遷移先が変わる。
 			// display form
 			?>
 			<p>
@@ -437,7 +462,7 @@ if ( ! class_exists( 'VK_Link_Target_Controller' ) ) {
 			</p>
 			<p>
 				<label style="display:inline-block;width:150px;" for="vk-ltc-link-field"><?php esc_html_e( 'URL', 'vk-link-target-controller' ); ?></label>
-				<input type="text" id="vk-ltc-link-field" name="vk-ltc-link-field" value="<?php echo esc_url( urldecode( $link ) ); ?>" size="35" />
+				<input type="text" id="vk-ltc-link-field" name="vk-ltc-link-field" value="<?php echo esc_url( $link ); ?>" size="35" />
 				<button type="button" class="vk-ltc-link-search-btn button button-default"><?php esc_html_e( 'Search internal link', 'vk-link-target-controller' ); ?></button>
 				<button id="media_vk-ltc-link-field" class="media_btn button button-default"><?php esc_html_e( 'File Link', 'vk-link-target-controller' ); ?></button>
 			</p>
@@ -513,10 +538,11 @@ jQuery(document).ready(function($){
 
 					// link field.
 					if ( isset( $_POST['vk-ltc-link-field'] ) ) {
-						// sanitize the user input.
-						$link = esc_url( $_POST['vk-ltc-link-field'] );
-
-						update_post_meta( $post_id, 'vk-ltc-link', esc_url( $link ) );
+						// Preserve encoded URL components while sanitizing the raw database value. / エンコード済み URL の構成要素を保持しつつ、DB 保存用の値をサニタイズする.
+						$link = wp_unslash( $_POST['vk-ltc-link-field'] );
+						if ( is_string( $link ) ) {
+							update_post_meta( $post_id, 'vk-ltc-link', esc_url_raw( $link ) );
+						}
 
 						/*
 						//check is link is allowed content
@@ -578,8 +604,11 @@ jQuery(document).ready(function($){
 		 */
 		function rewrite_link_filter( $orig_link, $post = 0 ) {
 			$modified_url = ''; // No need to esc_url(), it's done in rewrite_link().
-			if ( isset( $post->ID ) ) {
-				$modified_url = $this->rewrite_link( $post->ID );
+			// the_permalink() without an argument passes 0, so resolve it to the current post with get_post(); otherwise the redirect URL is not printed.
+			// 引数なしの the_permalink() は 0 を渡すため、get_post() で現在の投稿に解決する。解決しないとリダイレクト URL が出力されない。
+			$target_post = get_post( $post );
+			if ( $target_post ) {
+				$modified_url = $this->rewrite_link( $target_post->ID );
 			}
 
 			if ( empty( $modified_url ) ) {
@@ -874,7 +903,8 @@ $vk_link_target_controller = new VK_Link_Target_Controller();
 if ( isset( $vk_link_target_controller ) ) {
 	// Activate on front.
 	add_action( 'the_post', array( $vk_link_target_controller, 'initialize_front' ), 1 );
-	add_action( 'init', array( $vk_link_target_controller, 'initialize_front_script' ) );
+	add_action( 'wp_enqueue_scripts', array( $vk_link_target_controller, 'initialize_front_script' ) );
+	add_action( 'init', array( $vk_link_target_controller, 'register_ajax_ids_actions' ) );
 	add_action( 'wp', array( $vk_link_target_controller, 'redirection' ) );
 	add_action( 'get_header', array( $vk_link_target_controller, 'robots' ) );
 	// Set up admin.

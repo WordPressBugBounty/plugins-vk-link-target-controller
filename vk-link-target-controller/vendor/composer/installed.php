@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'vektor-inc/vk-link-target-controller',
-        'pretty_version' => '1.10.5',
-        'version' => '1.10.5.0',
-        'reference' => '851b70509c4b9e6d21d8606866ecf52ae2d19f58',
+        'pretty_version' => '1.10.6',
+        'version' => '1.10.6.0',
+        'reference' => 'e46e970ebb59d78058842fdb01c1aa76c30f6e89',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -20,9 +20,9 @@
             'dev_requirement' => false,
         ),
         'vektor-inc/vk-link-target-controller' => array(
-            'pretty_version' => '1.10.5',
-            'version' => '1.10.5.0',
-            'reference' => '851b70509c4b9e6d21d8606866ecf52ae2d19f58',
+            'pretty_version' => '1.10.6',
+            'version' => '1.10.6.0',
+            'reference' => 'e46e970ebb59d78058842fdb01c1aa76c30f6e89',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
